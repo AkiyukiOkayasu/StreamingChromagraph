@@ -27,6 +27,8 @@ IP = '127.0.0.1'
 PORT = 8080
 oscsender = udp_client.UDPClient(IP, PORT)
 
+# wavwrite用のリスト
+frames = []
 
 p = pyaudio.PyAudio()
 
@@ -41,9 +43,8 @@ def callback(in_data, frame_count, time_info, status):
     chromagram = librosa.util.normalize(chromagram, axis=0)
     audioin = librosa.resample(audioin, RATE, RESAMPLEDRATE)
     audioin = scipy.signal.lfilter(b, 1, audioin) * window
+    frames.extend(audioin.tolist())
 
-    out_data = harmonic.tobytes()
-    return (out_data, pyaudio.paContinue)
 
     # OSC send
     msg = osc_message_builder.OscMessageBuilder(address='/chromagram')
@@ -60,7 +61,7 @@ stream = p.open(
     rate=RATE,
     frames_per_buffer=CHUNK,
     input=True,
-    output=True,
+    output=False,
     stream_callback=callback
 )
 
@@ -69,5 +70,10 @@ print('start')
 stream.start_stream()
 time.sleep(20)
 stream.stop_stream()
+
+# wav書き出し
+ndout = np.array(frames)
+librosa.output.write_wav(path='/Users/akiyuki/Desktop/hoge.wav', y=ndout, sr=RESAMPLEDRATE, norm=True)
+
 p.terminate()
 print('stoped')
