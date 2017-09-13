@@ -35,16 +35,18 @@ p = pyaudio.PyAudio()
 
 def callback(in_data, frame_count, time_info, status):
     audioin = np.fromstring(in_data, dtype=np.float32)
-    harmonic = librosa.effects.harmonic(audioin, margin=3.0)
-    CQT = librosa.cqt(harmonic, sr=RATE, n_bins=NUMCHROMA, bins_per_octave=BINS_PER_OCTAVE, fmin=FMIN)
-    chroma_map = librosa.filters.cq_to_chroma(CQT.shape[0], bins_per_octave=BINS_PER_OCTAVE, fmin=FMIN)
-    print(chroma_map[:, 0])
-    chromagram = chroma_map.dot(CQT)
-    chromagram = librosa.util.normalize(chromagram, axis=0)
     audioin = librosa.resample(audioin, RATE, RESAMPLEDRATE)
+    audioin = librosa.effects.harmonic(audioin)
     audioin = scipy.signal.lfilter(b, 1, audioin) * window
+    chromagram = librosa.feature.chroma_stft(y=audioin, sr=RESAMPLEDRATE, norm=None)
+    chromagram = librosa.util.normalize(chromagram, axis=0, threshold=0.3)
     frames.extend(audioin.tolist())
 
+    # CQT = librosa.cqt(harmonic, sr=RATE, n_bins=NUMCHROMA, bins_per_octave=BINS_PER_OCTAVE, fmin=FMIN, hop_length=HOPLENGTH)
+    # chroma_map = librosa.filters.cq_to_chroma(CQT.shape[0], bins_per_octave=BINS_PER_OCTAVE, fmin=FMIN)
+    # chromagram = chroma_map.dot(CQT)
+    # chromagram = librosa.util.normalize(chromagram, axis=0)
+    # chromagram = np.abs(chromagram)
 
     # OSC send
     msg = osc_message_builder.OscMessageBuilder(address='/chromagram')
