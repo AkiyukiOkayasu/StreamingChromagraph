@@ -1,5 +1,6 @@
 import pyaudio
 import numpy as np
+import scipy.signal
 import librosa
 import librosa.display
 import time
@@ -11,6 +12,16 @@ RATE = 48000  # サンプルレート
 RESAMPLEDRATE = 12000  # リサンプル後のサンプルレート
 RESAMPLEDCHUNK = CHUNK * (RESAMPLEDRATE / RATE)  # リサンプル後のバッファーサイズ
 FORMAT = pyaudio.paFloat32
+
+# High pass filter
+FILTERSIZE = 31
+NYQ = RESAMPLEDRATE / 2.0  # ナイキスト周波数
+CUTOFF = 180.0 / NYQ
+b = scipy.signal.firwin(FILTERSIZE, CUTOFF, pass_zero=False)
+
+# 窓関数
+window = np.hanning(RESAMPLEDCHUNK)
+
 # OSC ip/portnumber
 IP = '127.0.0.1'
 PORT = 8080
@@ -29,6 +40,7 @@ def callback(in_data, frame_count, time_info, status):
     chromagram = chroma_map.dot(CQT)
     chromagram = librosa.util.normalize(chromagram, axis=0)
     audioin = librosa.resample(audioin, RATE, RESAMPLEDRATE)
+    audioin = scipy.signal.lfilter(b, 1, audioin) * window
 
     out_data = harmonic.tobytes()
     return (out_data, pyaudio.paContinue)
