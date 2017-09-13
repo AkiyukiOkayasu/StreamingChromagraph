@@ -2,27 +2,23 @@ import pyaudio
 import numpy as np
 import librosa
 import librosa.display
-import matplotlib.pyplot as plt
 import time
 from pythonosc import osc_message_builder
 from pythonosc import udp_client
 
-CHUNK=2048
-RATE=48000
-FORMAT=pyaudio.paFloat32
-BINS_PER_OCTAVE=48
-OCTRANGE=6
-NUMCHROMA=BINS_PER_OCTAVE * OCTRANGE
-FMIN=librosa.note_to_hz('C1')
+CHUNK = 32768  # バッファーサイズ
+RATE = 48000  # サンプルレート
+FORMAT = pyaudio.paFloat32
 # OSC ip/portnumber
 IP = '127.0.0.1'
 PORT = 8080
 oscsender = udp_client.UDPClient(IP, PORT)
 
-p=pyaudio.PyAudio()
+
+p = pyaudio.PyAudio()
+
 
 def callback(in_data, frame_count, time_info, status):
-    # print('begin callback')
     audioin = np.fromstring(in_data, dtype=np.float32)
     harmonic = librosa.effects.harmonic(audioin, margin=3.0)
     CQT = librosa.cqt(harmonic, sr=RATE, n_bins=NUMCHROMA, bins_per_octave=BINS_PER_OCTAVE, fmin=FMIN)
@@ -34,7 +30,6 @@ def callback(in_data, frame_count, time_info, status):
     out_data = harmonic.tobytes()
     return (out_data, pyaudio.paContinue)
 
-stream=p.open(
     # OSC send
     msg = osc_message_builder.OscMessageBuilder(address='/chromagram')
     for i in range(12):
@@ -42,6 +37,9 @@ stream=p.open(
     msg = msg.build()
     oscsender.send(msg)
     return (None, pyaudio.paContinue)
+
+
+stream = p.open(
     format=FORMAT,
     channels=1,
     rate=RATE,
@@ -51,9 +49,10 @@ stream=p.open(
     stream_callback=callback
 )
 
+
 print('start')
 stream.start_stream()
 time.sleep(20)
 stream.stop_stream()
 p.terminate()
-print("stoped")
+print('stoped')
