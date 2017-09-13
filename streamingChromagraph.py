@@ -4,6 +4,8 @@ import librosa
 import librosa.display
 import matplotlib.pyplot as plt
 import time
+from pythonosc import osc_message_builder
+from pythonosc import udp_client
 
 CHUNK=2048
 RATE=48000
@@ -12,6 +14,10 @@ BINS_PER_OCTAVE=48
 OCTRANGE=6
 NUMCHROMA=BINS_PER_OCTAVE * OCTRANGE
 FMIN=librosa.note_to_hz('C1')
+# OSC ip/portnumber
+IP = '127.0.0.1'
+PORT = 8080
+oscsender = udp_client.UDPClient(IP, PORT)
 
 p=pyaudio.PyAudio()
 
@@ -29,6 +35,13 @@ def callback(in_data, frame_count, time_info, status):
     return (out_data, pyaudio.paContinue)
 
 stream=p.open(
+    # OSC send
+    msg = osc_message_builder.OscMessageBuilder(address='/chromagram')
+    for i in range(12):
+        msg.add_arg(chromagram[i, 0])
+    msg = msg.build()
+    oscsender.send(msg)
+    return (None, pyaudio.paContinue)
     format=FORMAT,
     channels=1,
     rate=RATE,
