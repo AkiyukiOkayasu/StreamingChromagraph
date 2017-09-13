@@ -8,6 +8,8 @@ from pythonosc import udp_client
 
 CHUNK = 32768  # バッファーサイズ
 RATE = 48000  # サンプルレート
+RESAMPLEDRATE = 12000  # リサンプル後のサンプルレート
+RESAMPLEDCHUNK = CHUNK * (RESAMPLEDRATE / RATE)  # リサンプル後のバッファーサイズ
 FORMAT = pyaudio.paFloat32
 # OSC ip/portnumber
 IP = '127.0.0.1'
@@ -26,6 +28,7 @@ def callback(in_data, frame_count, time_info, status):
     print(chroma_map[:, 0])
     chromagram = chroma_map.dot(CQT)
     chromagram = librosa.util.normalize(chromagram, axis=0)
+    audioin = librosa.resample(audioin, RATE, RESAMPLEDRATE)
 
     out_data = harmonic.tobytes()
     return (out_data, pyaudio.paContinue)
